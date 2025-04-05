@@ -1,5 +1,5 @@
 import { NextAuthOptions } from "@auth/core";
-import { NextAuth } from "@auth/nextjs";
+import { NextAuth } from "next-auth";
 import CredentialsProvider from "@auth/core/providers/credentials";
 
 const users = [
