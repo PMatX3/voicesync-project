@@ -1,6 +1,6 @@
-import { handlers } from "@/lib/auth";
+// app/api/auth/[...nextauth]/route.ts
 
-// Debug: Log the handlers object to confirm it's being exported correctly
-console.log("NextAuth handlers:", handlers);
+import { handlers } from "@/lib/auth"; // Import the handlers created in lib/auth.ts
 
-export const { GET, POST } = handlers
+// Export the GET and POST handlers provided by Auth.js
+export const { GET, POST } = handlers;
