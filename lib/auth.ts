@@ -1,6 +1,8 @@
-import { NextAuthOptions } from "@auth/core";
-import { NextAuth } from "@auth/core";
+// lib/auth.ts
+import { AuthConfig } from "@auth/core";
 import CredentialsProvider from "@auth/core/providers/credentials";
+import NextAuth from "next-auth"; // Add this for handlers
+import { cookies, headers } from "next/headers";
 
 const users = [
   {
@@ -17,8 +19,9 @@ const users = [
   },
 ];
 
-export const authOptions: NextAuthOptions = {
-  secret: process.env.NEXTAUTH_SECRET,
+// lib/auth.ts (updated snippet)
+export const authOptions: AuthConfig = {
+  secret: process.env.NEXTAUTH_SECRET || "bEx%.Wa6ezkRv<&Uj5B/YAK@Hf8yw[!S",
   providers: [
     CredentialsProvider({
       name: "Credentials",
@@ -28,55 +31,46 @@ export const authOptions: NextAuthOptions = {
       },
       async authorize(credentials) {
         console.log("Credentials received:", credentials);
-        if (!credentials?.email || !credentials?.password) {
-          console.log("Missing email or password");
-          return null;
-        }
-
-        const user = users.find((user) => user.email === credentials.email);
-
-        if (user && user.password === credentials.password) {
-          console.log("User found:", user);
-          return {
-            id: user.id,
-            email: user.email,
-            role: user.role,
-          };
-        }
-
-        console.log("No user found or password mismatch");
-        return null;
+        if (!credentials?.email || !credentials?.password) return null;
+        const user = users.find((u) => u.email === credentials.email);
+        if (!user || user.password !== credentials.password) return null;
+        console.log("User found:", user);
+        return { id: user.id, email: user.email, role: user.role };
       },
     }),
   ],
+  session: {
+    strategy: "jwt",
+  },
+  cookies: {
+    sessionToken: {
+      name: "next-auth.session-token", // Match what’s actually set
+      options: {
+        httpOnly: true,
+        sameSite: "lax",
+        path: "/",
+        secure: process.env.NODE_ENV === "production",
+      },
+    },
+  },
   callbacks: {
     async jwt({ token, user }) {
-      console.log("JWT callback - token:", token, "user:", user);
       if (user) {
         token.role = user.role;
       }
+      console.log("JWT callback - token:", token, "user:", user);
       return token;
     },
     async session({ session, token }) {
-      console.log("Session callback - session:", session, "token:", token);
-      if (session.user && token.role) {
-        session.user = {
-          ...session.user,
-          role: token.role as string,
-        };
+      if (token && session.user) {
+        session.user.role = token.role as string;
+        session.user.email = token.email;
       }
+      console.log("Session callback - session:", session, "token:", token);
       return session;
     },
   },
-  pages: {
-    signIn: "/auth/signin",
-  },
-  session: {
-    strategy: "jwt",
-    maxAge: 30 * 24 * 60 * 60,
-  },
+  debug: true,
 };
 
 export const { handlers, auth, signIn, signOut } = NextAuth(authOptions);
-
-console.log("NextAuth handlers:", handlers);
